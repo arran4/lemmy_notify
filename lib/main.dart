@@ -67,7 +67,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     trayManager.setIcon(
       icon, // Use a different icon if needed
     );
-    trayManager.setToolTip('New Posts: $newPostsCount, New Messages: $newMessagesCount');
+    if (!Platform.isLinux) {
+      trayManager.setToolTip(
+          'New Posts: $newPostsCount, New Messages: $newMessagesCount');
+    }
     Menu menu = Menu(
       items: [
         MenuItem(
@@ -169,7 +172,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       trayManager.setIcon(
         icon, // Use a different icon if needed
       );
-      trayManager.setToolTip('New Posts: $newPostsCount, New Messages: $newMessagesCount');
+      if (!Platform.isLinux) {
+        trayManager.setToolTip('New Posts: $newPostsCount, New Messages: $newMessagesCount');
+      }
     } catch (e) {
       if (context.mounted){
         ScaffoldMessenger.of(context).showSnackBar(
