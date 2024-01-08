@@ -45,21 +45,36 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   }
 
   Future<void> initLemmyClient() async {
-    // Load user preferences
-    final String? serverUrl = await SharedPreferences.getInstance().then((prefs) => prefs.getString('serverUrl') ?? '');
-    final String? username = await SharedPreferences.getInstance().then((prefs) => prefs.getString('username') ?? '');
-    final String? password = await secureStorage.read(key: 'password');
-
     lemmyClient = null;
 
-    // Set up the Lemmy API client with user preferences
-    if (serverUrl != null) {
-      lemmyClient = LemmyApiV3(serverUrl);
-    }
-    if (lemmyClient != null && username != null && password != null) {
-      authResponse = await lemmyClient?.run(Login(usernameOrEmail: username, password: password));
-    }
+    try {
+      // Load user preferences
+      final String? serverUrl = await SharedPreferences.getInstance().then((
+          prefs) => prefs.getString('serverUrl') ?? '');
+      final String? username = await SharedPreferences.getInstance().then((
+          prefs) => prefs.getString('username') ?? '');
+      final String? password = await secureStorage.read(key: 'password');
 
+
+      // Set up the Lemmy API client with user preferences
+      if (serverUrl != null) {
+        lemmyClient = LemmyApiV3(serverUrl);
+      }
+      if (lemmyClient != null && username != null && password != null) {
+        authResponse = await lemmyClient?.run(
+            Login(usernameOrEmail: username, password: password));
+      }
+    } catch (e) {
+      if (context.mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging in: $e'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> initSystemTray() async {
