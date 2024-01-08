@@ -68,6 +68,15 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       icon, // Use a different icon if needed
     );
     trayManager.setToolTip('New Posts: $newPostsCount, New Messages: $newMessagesCount');
+    Menu menu = Menu(
+      items: [
+        MenuItem(
+          key: 'settings',
+          label: 'Settings',
+        ),
+      ],
+    );
+    trayManager.setContextMenu(menu);
     trayManager.addListener(this);
   }
 
