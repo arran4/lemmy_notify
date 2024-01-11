@@ -39,8 +39,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   String? status;
   String? lastError;
   Timer? updateTimer;
-  bool openMinimizedToSystemTray = false;
   GetSiteResponse? siteResponse;
+  final StreamController<String> _eventStreamController = StreamController<String>();
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -50,6 +50,11 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     lemmyClient = createLemmyClient();
     initSystemTray();
     initTimer();
+    SharedPreferences.getInstance().then((prefs) => prefs.getBool('openMinimizedToSystemTray') ?? false).then((value) {
+      if (!value) {
+
+      }
+    });
   }
 
   Future<LemmyApiV3?> createLemmyClient() async {
@@ -126,13 +131,6 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   }
 
   Future<void> showSettingsWindow() async {
-    final prefs = await SharedPreferences.getInstance();
-    final serverController = TextEditingController(text: prefs.getString('serverUrl') ?? '');
-    final usernameController = TextEditingController(text: prefs.getString('username') ?? '');
-    final passwordController = TextEditingController(text: '');
-    final timerIntervalController = TextEditingController(
-        text: prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5');
-
     if (!context.mounted) {
       return;
     }
@@ -142,41 +140,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Settings'),
-          content: Column(
-            children: [
-              TextField(
-                controller: serverController,
-                decoration: const InputDecoration(labelText: 'Lemmy Server URL'),
-              ),
-              TextField(
-                controller: usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
-              ),
-              TextField(
-                controller: timerIntervalController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Timer Interval (minutes)'),
-              ),
-              Row(
-                children: [
-                  Checkbox(
-                    value: openMinimizedToSystemTray,
-                    onChanged: (value) {
-                      setState(() {
-                        openMinimizedToSystemTray = value ?? false;
-                      });
-                    },
-                  ),
-                  const Text('Open minimized to system tray'),
-                ],
-              ),
-            ],
-          ),
+          content: SettingsPage(savedResults: saveSettings, eventStream: _eventStreamController.stream),
           actions: [
             TextButton(
               onPressed: () {
@@ -188,21 +152,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
             ),
             TextButton(
               onPressed: () async {
-                // Save user preferences
-                await prefs.setString('serverUrl', serverController.text);
-                await prefs.setString('username', usernameController.text);
-                await prefs.setInt('timerInterval', int.parse(timerIntervalController.text));
-
-                // Save the password securely
-                await secureStorage.write(key: 'password', value: passwordController.text);
-
-                lemmyClient = createLemmyClient();
-                await initTimer();
-                forceRefresh();
-
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
+                _eventStreamController.add("save");
               },
               child: const Text('Save'),
             ),
@@ -218,10 +168,6 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       if (client == null) {
         return;
       }
-      setState(() {
-        newPostsCount = null;
-        newMessagesCount = null;
-      });
       if (authResponse == null || authResponse!.jwt == null) {
         return;
       }
@@ -417,4 +363,114 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       showSettingsWindow();
     }
   }
+
+  void saveSettings(String serverUrl, String username, int timerInterval, String? password) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Save user preferences
+    await prefs.setString('serverUrl', serverUrl);
+    await prefs.setString('username', username);
+    await prefs.setInt('timerInterval', timerInterval);
+
+    // Save the password securely
+    if (password != null && password.isNotEmpty) {
+      await secureStorage.write(key: 'password', value: password);
+    }
+
+    lemmyClient = createLemmyClient();
+    await initTimer();
+    forceRefresh();
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+}
+
+typedef SettingsPageSavedResultsFunc = void Function(String serverUrl, String username, int timerInterval, String? password);
+
+class SettingsPage extends StatefulWidget {
+  final SettingsPageSavedResultsFunc? savedResults;
+  final Stream<String> eventStream;
+
+  SettingsPage({super.key, required this.eventStream, required this.savedResults});
+
+  @override
+  State<StatefulWidget> createState() {
+    return _SettingsPageState();
+  }
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool openMinimizedToSystemTray = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then(((SharedPreferences prefs) {
+      openMinimizedToSystemTray = prefs.getBool('openMinimizedToSystemTray')??openMinimizedToSystemTray;
+      serverController.text = prefs.getString('serverUrl') ?? '';
+      usernameController.text = prefs.getString('username') ?? '';
+      passwordController.text = '';
+      timerIntervalController.text = prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5';
+    }));
+  }
+  //
+  late TextEditingController serverController = TextEditingController();
+  late TextEditingController usernameController = TextEditingController();
+  late TextEditingController passwordController = TextEditingController();
+  late TextEditingController timerIntervalController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<String>(
+        stream: widget.eventStream,
+        builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+          if (snapshot.hasData && snapshot.data == "save") {
+            if (widget.savedResults != null) {
+              String? pwd = null;
+              if (passwordController.text.isNotEmpty) {
+                pwd = passwordController.text;
+              }
+              widget.savedResults!(serverController.text, usernameController.text, int.parse(timerIntervalController.text), pwd);
+            }
+          }
+          return Column(
+            children: [
+              TextField(
+                controller: serverController,
+                decoration: const InputDecoration(
+                    labelText: 'Lemmy Server URL'),
+              ),
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+              ),
+              TextField(
+                controller: timerIntervalController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Timer Interval (minutes)'),
+              ),
+              CheckboxListTile(
+                value: openMinimizedToSystemTray,
+                title: const Text('Open minimized to system tray'),
+                onChanged: (bool? value) async {
+                  final prefs = SharedPreferences.getInstance();
+                  await (await prefs).setBool('openMinimizedToSystemTray', value ?? false);
+                  setState(() {
+                    openMinimizedToSystemTray = value??false;
+                  });
+                },
+              ),
+            ],
+          );
+        }
+    );
+  }
+
 }
