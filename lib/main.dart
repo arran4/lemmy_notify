@@ -36,6 +36,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   Timer? updateTimer;
   bool openMinimizedToSystemTray = false;
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -65,10 +67,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       if (lemmyClient != null && password != null) {
         authResponse = await lemmyClient?.run(Login(usernameOrEmail: username, password: password));
       }
-      setState(() {
-        status = 'Loading';
-      });
+      showSnackbar('Status: Loading');
     } catch (e) {
+      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
@@ -217,8 +218,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
 
       // Update the counts
       setState(() {
+        final int oldPostsCount = newPostsCount ?? 0;
+        final int oldMessagesCount = newMessagesCount ?? 0;
         newPostsCount = posts.posts.where((PostView post) => post.read && post.unreadComments == 0).length;
         newMessagesCount = messages.privateMessages.length;
+
+        showSnackbar('Status: Update Successful\n'
+            'New Posts: $newPostsCount (Delta: ${newPostsCount! - oldPostsCount}), '
+            'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})');
       });
 
       // Update the system tray icon with the new counts
@@ -230,6 +237,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
             'New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
       }
     } catch (e) {
+      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
@@ -237,17 +245,43 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     }
   }
 
+  void forceRefresh() {
+    setState(() {
+      status = 'loading';
+    });
+    checkForUpdates();
+  }
+
+  void showSnackbar(String message) {
+    _scaffoldKey.currentState?.showSnackBar(SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 3),
+      backgroundColor: Colors.blue,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (status == null) {
-      status = "loading";
+      status = 'loading';
       checkForUpdates();
     }
 
     if (status == 'Error') {
       return Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
           title: const Text('Lemmy Notifier'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: showSettingsWindow,
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: forceRefresh,
+            ),
+          ],
         ),
         body: Center(
           child: Column(
@@ -256,12 +290,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
               const Text('Error:'),
               Text(lastError ?? 'Unknown Error'),
               ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    status = 'loading';
-                  });
-                  checkForUpdates();
-                },
+                onPressed: forceRefresh,
                 child: const Text('Retry'),
               ),
             ],
@@ -271,12 +300,17 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Lemmy Notifier'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: showSettingsWindow,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: forceRefresh,
           ),
         ],
       ),
@@ -315,10 +349,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
     if (menuItem.key == 'refresh') {
-      setState(() {
-        status = 'loading';
-      });
-      checkForUpdates();
+      forceRefresh();
     } else if (menuItem.key == 'settings') {
       showSettingsWindow();
     }
