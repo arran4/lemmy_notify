@@ -27,7 +27,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   int? newPostsCount;
   int? newMessagesCount;
-  LemmyApiV3? lemmyClient;
+  Future<LemmyApiV3?>? lemmyClient;
   LoginResponse? authResponse;
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
   final String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
@@ -41,14 +41,12 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   @override
   void initState() {
     super.initState();
-    initLemmyClient();
+    lemmyClient = createLemmyClient();
     initSystemTray();
     initTimer();
   }
 
-  Future<void> initLemmyClient() async {
-    lemmyClient = null;
-
+  Future<LemmyApiV3?> createLemmyClient() async {
     try {
       // Load user preferences
       final String? serverUrl = await SharedPreferences.getInstance().then((prefs) => prefs.getString('serverUrl') ?? '');
@@ -59,21 +57,26 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         setState(() {
           status = 'Nothing configured';
         });
-        return;
+        return null;
       }
 
       // Set up the Lemmy API client with user preferences
-      lemmyClient = LemmyApiV3(serverUrl);
-      if (lemmyClient != null && password != null) {
-        authResponse = await lemmyClient?.run(Login(usernameOrEmail: username, password: password));
+      LemmyApiV3 client = LemmyApiV3(serverUrl);
+      if (password != null) {
+        authResponse = await client.run(Login(usernameOrEmail: username, password: password));
       }
-      showSnackbar('Status: Loading');
+      setState(() {
+        status = 'configured';
+      });
+      showSnackbar('Status: $status');
+      return client;
     } catch (e) {
       showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
       });
+      return null;
     }
   }
 
@@ -83,7 +86,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       icon, // Use a different icon if needed
     );
     if (!Platform.isLinux) {
-      trayManager.setToolTip('New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
+      trayManager.setToolTip('New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
     }
     Menu menu = Menu(
       items: [
@@ -180,10 +183,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
                 // Save the password securely
                 await secureStorage.write(key: 'password', value: passwordController.text);
 
-                await initLemmyClient();
+                lemmyClient = createLemmyClient();
                 await initTimer();
-
-                // TODO verify it works.
+                forceRefresh();
 
                 if (context.mounted) {
                   Navigator.of(context).pop();
@@ -198,8 +200,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   }
 
   Future<void> checkForUpdates() async {
+    LemmyApiV3? client = await lemmyClient;
     try {
-      if (lemmyClient == null) {
+      if (client == null) {
         return;
       }
       setState(() {
@@ -209,11 +212,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       if (authResponse == null || authResponse!.jwt == null) {
         return;
       }
+      setState(() {
+        status = 'checking';
+      });
       // Fetch new posts
-      final GetPostsResponse posts = await lemmyClient!.run(GetPosts(auth: authResponse!.jwt));
+      final GetPostsResponse posts = await client!.run(GetPosts(auth: authResponse!.jwt));
 
       // Fetch new messages
-      final PrivateMessagesResponse messages = await lemmyClient!.run(
+      final PrivateMessagesResponse messages = await client!.run(
           GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
 
       // Update the counts
@@ -222,7 +228,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         final int oldMessagesCount = newMessagesCount ?? 0;
         newPostsCount = posts.posts.where((PostView post) => post.read && post.unreadComments == 0).length;
         newMessagesCount = messages.privateMessages.length;
-
+        status = "updated";
         showSnackbar('Status: Update Successful\n'
             'New Posts: $newPostsCount (Delta: ${newPostsCount! - oldPostsCount}), '
             'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})');
@@ -234,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       );
       if (!Platform.isLinux) {
         trayManager.setToolTip(
-            'New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
+            'New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
       }
     } catch (e) {
       showSnackbar('Error: $e');
@@ -265,8 +271,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   @override
   Widget build(BuildContext context) {
     if (status == null) {
-      status = 'loading';
-      checkForUpdates();
+      forceRefresh();
     }
 
     if (status == 'Error') {
@@ -320,8 +325,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('New Posts: ${newPostsCount ?? 'loading'}'),
-            Text('New Messages: ${newMessagesCount ?? 'loading'}'),
+            Text('New Posts: ${newPostsCount ?? 'initializing'}'),
+            Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
           ],
         ),
       ),
