@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:lemmy_api_client/v3.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,12 +25,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> implements TrayListener {
-  int newPostsCount = 0;
-  int newMessagesCount = 0;
+  int? newPostsCount;
+  int? newMessagesCount;
   LemmyApiV3? lemmyClient;
   LoginResponse? authResponse;
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
   final String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String? status;
 
   @override
   void initState() {
@@ -61,6 +61,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         lemmyClient = LemmyApiV3(serverUrl);
       }
       if (lemmyClient != null && username != null && password != null) {
+
+        // TODO fix jwt / jws parsing issue
+
         authResponse = await lemmyClient?.run(
             Login(usernameOrEmail: username, password: password));
       }
@@ -84,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     );
     if (!Platform.isLinux) {
       trayManager.setToolTip(
-          'New Posts: $newPostsCount, New Messages: $newMessagesCount');
+          'New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
     }
     Menu menu = Menu(
       items: [
@@ -168,19 +171,23 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       if (lemmyClient == null) {
         return;
       }
+      setState(() {
+        newPostsCount = null;
+        newMessagesCount = null;
+      });
       if (authResponse == null || authResponse!.jwt == null) {
         return;
       }
       // Fetch new posts
-      final List<PostView> posts = await lemmyClient!.run(GetPosts(auth: authResponse!.jwt!.raw));
+      final GetPostsResponse posts = await lemmyClient!.run(GetPosts(auth: authResponse!.jwt));
 
       // Fetch new messages
-      final List<PrivateMessageView> messages = await lemmyClient!.run(GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt!.raw));
+      final PrivateMessagesResponse messages = await lemmyClient!.run(GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
 
       // Update the counts
       setState(() {
-        newPostsCount = posts.length;
-        newMessagesCount = messages.length;
+        newPostsCount = posts.posts.where((PostView post) => post.read && post.unreadComments == 0).length;
+        newMessagesCount = messages.privateMessages.length;
       });
 
       // Update the system tray icon with the new counts
@@ -188,7 +195,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         icon, // Use a different icon if needed
       );
       if (!Platform.isLinux) {
-        trayManager.setToolTip('New Posts: $newPostsCount, New Messages: $newMessagesCount');
+        trayManager.setToolTip('New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
       }
     } catch (e) {
       if (context.mounted){
@@ -205,6 +212,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
 
   @override
   Widget build(BuildContext context) {
+    if (status == null) {
+      status = "loading";
+      checkForUpdates();
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lemmy Notifier'),
@@ -213,8 +224,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('New Posts: $newPostsCount'),
-            Text('New Messages: $newMessagesCount'),
+            Text('New Posts: ${newPostsCount ?? 'loading'}'),
+            Text('New Messages: ${newMessagesCount ?? 'loading'}'),
           ],
         ),
       ),

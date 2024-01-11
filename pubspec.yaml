@@ -31,7 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
   tray_manager: 0.2.1
-  lemmy_api_client: 0.21.0
+  lemmy_api_client:
+    git:
+      url: https://github.com/thunder-app/lemmy_api_client.git
+      ref: 001271f4b9f326c15c6046104bab73b07cc7b7d3
   shared_preferences: 2.2.2
   flutter_secure_storage: 9.0.0
 
