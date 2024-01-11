@@ -5,6 +5,8 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:lemmy_api_client/v3.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 void main() {
   runApp(MyApp());
@@ -30,7 +32,11 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   Future<LemmyApiV3?>? lemmyClient;
   LoginResponse? authResponse;
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
-  final String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String iconNewPosts = 'images/tray_icon_new_posts.png';
+  String iconNewMessages = 'images/tray_icon_new_messages.png';
+  String iconDefault = 'images/tray_icon.png';
+  String currentIcon = 'images/tray_icon.png';
   String? status;
   String? lastError;
   Timer? updateTimer;
@@ -91,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   Future<void> initSystemTray() async {
     // Set up the system tray icon
     trayManager.setIcon(
-      icon, // Use a different icon if needed
+      currentIcon, // Use a different icon if needed
     );
     if (!Platform.isLinux) {
       trayManager.setToolTip('New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
@@ -237,6 +243,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         newPostsCount = posts.posts.where((PostView post) => !post.read && post.unreadComments >= 0).length;
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
+
+        if (newMessagesCount! > oldMessagesCount) {
+          currentIcon = iconNewMessages;
+        } else if (newPostsCount! > oldPostsCount) {
+          currentIcon = iconNewPosts;
+        } else {
+          currentIcon = iconDefault;
+        }
         showSnackbar('Status: Update Successful\n'
             'New Posts: $newPostsCount (Delta: ${newPostsCount! - oldPostsCount}), '
             'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})\n'
@@ -245,7 +259,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
 
       // Update the system tray icon with the new counts
       trayManager.setIcon(
-        icon, // Use a different icon if needed
+        currentIcon, // Use a different icon if needed
       );
       if (!Platform.isLinux) {
         trayManager.setToolTip(
@@ -349,11 +363,17 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
             if (siteResponse != null)
-              Text(
-                '\nLemmy Instance: ${siteResponse?.siteView.site.name} ${siteResponse?.siteView.site.actorId}',
-                style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+              GestureDetector(
+                onTap: () {
+                  if (siteResponse != null) {
+                    launchUrlString(siteResponse!.siteView.site.actorId);
+                  }
+                },
+                child: Text(
+                  '\nLemmy Instance: ${siteResponse?.siteView.site.name}',
+                  style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                ),
               ),
-
           ],
         ),
       ),
