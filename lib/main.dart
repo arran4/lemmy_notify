@@ -32,16 +32,16 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
   final String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
   String? status;
+  String? lastError;
+  Timer? updateTimer;
+  bool openMinimizedToSystemTray = false;
 
   @override
   void initState() {
     super.initState();
     initLemmyClient();
     initSystemTray();
-    // Start checking for updates
-    Timer.periodic(const Duration(minutes: 5), (Timer timer) {
-      checkForUpdates();
-    });
+    initTimer();
   }
 
   Future<void> initLemmyClient() async {
@@ -49,34 +49,30 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
 
     try {
       // Load user preferences
-      final String? serverUrl = await SharedPreferences.getInstance().then((
-          prefs) => prefs.getString('serverUrl') ?? '');
-      final String? username = await SharedPreferences.getInstance().then((
-          prefs) => prefs.getString('username') ?? '');
+      final String? serverUrl = await SharedPreferences.getInstance().then((prefs) => prefs.getString('serverUrl') ?? '');
+      final String? username = await SharedPreferences.getInstance().then((prefs) => prefs.getString('username') ?? '');
       final String? password = await secureStorage.read(key: 'password');
 
+      if (serverUrl == null || username == null) {
+        setState(() {
+          status = 'Nothing configured';
+        });
+        return;
+      }
 
       // Set up the Lemmy API client with user preferences
-      if (serverUrl != null) {
-        lemmyClient = LemmyApiV3(serverUrl);
+      lemmyClient = LemmyApiV3(serverUrl);
+      if (lemmyClient != null && password != null) {
+        authResponse = await lemmyClient?.run(Login(usernameOrEmail: username, password: password));
       }
-      if (lemmyClient != null && username != null && password != null) {
-
-        // TODO fix jwt / jws parsing issue
-
-        authResponse = await lemmyClient?.run(
-            Login(usernameOrEmail: username, password: password));
-      }
+      setState(() {
+        status = 'Loading';
+      });
     } catch (e) {
-      if (context.mounted){
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error logging in: $e'),
-            duration: const Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      setState(() {
+        status = 'Error';
+        lastError = e.toString();
+      });
     }
   }
 
@@ -86,11 +82,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       icon, // Use a different icon if needed
     );
     if (!Platform.isLinux) {
-      trayManager.setToolTip(
-          'New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
+      trayManager.setToolTip('New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
     }
     Menu menu = Menu(
       items: [
+        MenuItem(
+          key: 'refresh',
+          label: 'Refresh Now',
+        ),
         MenuItem(
           key: 'settings',
           label: 'Settings',
@@ -101,11 +100,21 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     trayManager.addListener(this);
   }
 
+  Future<void> initTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int timerInterval = prefs.getInt('timerInterval') ?? 5; // Default timer interval is 5 minutes
+    updateTimer = Timer.periodic(Duration(minutes: timerInterval), (Timer timer) {
+      checkForUpdates();
+    });
+  }
+
   Future<void> showSettingsWindow() async {
     final prefs = await SharedPreferences.getInstance();
     final serverController = TextEditingController(text: prefs.getString('serverUrl') ?? '');
     final usernameController = TextEditingController(text: prefs.getString('username') ?? '');
     final passwordController = TextEditingController(text: '');
+    final timerIntervalController = TextEditingController(
+        text: prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5');
 
     if (!context.mounted) {
       return;
@@ -131,6 +140,24 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
               ),
+              TextField(
+                controller: timerIntervalController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Timer Interval (minutes)'),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: openMinimizedToSystemTray,
+                    onChanged: (value) {
+                      setState(() {
+                        openMinimizedToSystemTray = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text('Open minimized to system tray'),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -147,11 +174,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
                 // Save user preferences
                 await prefs.setString('serverUrl', serverController.text);
                 await prefs.setString('username', usernameController.text);
+                await prefs.setInt('timerInterval', int.parse(timerIntervalController.text));
 
                 // Save the password securely
                 await secureStorage.write(key: 'password', value: passwordController.text);
 
                 await initLemmyClient();
+                await initTimer();
+
                 // TODO verify it works.
 
                 if (context.mounted) {
@@ -182,7 +212,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       final GetPostsResponse posts = await lemmyClient!.run(GetPosts(auth: authResponse!.jwt));
 
       // Fetch new messages
-      final PrivateMessagesResponse messages = await lemmyClient!.run(GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
+      final PrivateMessagesResponse messages = await lemmyClient!.run(
+          GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
 
       // Update the counts
       setState(() {
@@ -195,18 +226,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         icon, // Use a different icon if needed
       );
       if (!Platform.isLinux) {
-        trayManager.setToolTip('New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
+        trayManager.setToolTip(
+            'New Posts: ${newPostsCount ?? 'loading'}, New Messages: ${newMessagesCount ?? 'loading'}');
       }
     } catch (e) {
-      if (context.mounted){
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error checking for updates: $e'),
-            duration: const Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      setState(() {
+        status = 'Error';
+        lastError = e.toString();
+      });
     }
   }
 
@@ -216,9 +243,42 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       status = "loading";
       checkForUpdates();
     }
+
+    if (status == 'Error') {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Lemmy Notifier'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text('Error:'),
+              Text(lastError ?? 'Unknown Error'),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    status = 'loading';
+                  });
+                  checkForUpdates();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lemmy Notifier'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: showSettingsWindow,
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -234,23 +294,32 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
 
   @override
   void onTrayIconMouseDown() {
+    // TODO: Implement
   }
 
   @override
   void onTrayIconMouseUp() {
+    // TODO: Implement
   }
 
   @override
   void onTrayIconRightMouseDown() {
+    // TODO: Implement
   }
 
   @override
   void onTrayIconRightMouseUp() {
+    // TODO: Implement
   }
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
-    if (menuItem.key == 'settings') {
+    if (menuItem.key == 'refresh') {
+      setState(() {
+        status = 'loading';
+      });
+      checkForUpdates();
+    } else if (menuItem.key == 'settings') {
       showSettingsWindow();
     }
   }
