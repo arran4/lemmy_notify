@@ -340,6 +340,12 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       );
     }
 
+    // Custom style for the link
+    TextStyle linkStyle = const TextStyle(
+      color: Colors.blue,
+      decoration: TextDecoration.underline,
+    );
+
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -360,26 +366,21 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             if (siteResponse != null)
-              GestureDetector(
-                onTap: () {
-                  if (siteResponse != null) {
-                    launchUrlString(siteResponse!.siteView.site.actorId);
-                  }
-                },
-                child: Tooltip(
-                  message: siteResponse?.siteView.site.actorId ?? '', // Display the URL as a tooltip
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Lemmy Instance: '),
-                      Text(
-                        '${siteResponse?.siteView.site.name}',
-                        style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                      )
-                    ],
+              Row(mainAxisAlignment: MainAxisAlignment.center,children: [
+                const Text('Lemmy Instance: ', style: TextStyle(fontWeight: FontWeight.bold),),
+                GestureDetector(
+                  onTap: () {
+                    if (siteResponse != null) {
+                      launchUrlString(siteResponse!.siteView.site.actorId);
+                    }
+                  },
+                  child: Text(
+                    '${siteResponse?.siteView.site.name}',
+                    style: linkStyle,
                   ),
                 ),
-              ),
+              ],
+            ),
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
           ],
