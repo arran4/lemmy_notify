@@ -5,10 +5,25 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:lemmy_api_client/v3.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = WindowOptions(
+    // size: Size(800, 600),
+    // center: true,
+    // backgroundColor: Colors.transparent,
+    // skipTaskbar: false,
+    // titleBarStyle: TitleBarStyle.hidden,
+  );
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    // await windowManager.show();
+    // await windowManager.focus();
+  });
+
   runApp(MyApp());
 }
 
@@ -26,7 +41,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> implements TrayListener {
+class _MyHomePageState extends State<MyHomePage> implements TrayListener, WindowListener {
   int? newPostsCount;
   int? newMessagesCount;
   Future<LemmyApiV3?>? lemmyClient;
@@ -40,19 +55,21 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   String? lastError;
   Timer? updateTimer;
   GetSiteResponse? siteResponse;
-  final StreamController<String> _eventStreamController = StreamController<String>();
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
+    windowManager.setPreventClose(true);
+    windowManager.addListener(this);
     lemmyClient = createLemmyClient();
     initSystemTray();
     initTimer();
     SharedPreferences.getInstance().then((prefs) => prefs.getBool('openMinimizedToSystemTray') ?? false).then((value) {
       if (!value) {
-
+        windowManager.show();
+        windowManager.focus();
       }
     });
   }
@@ -116,6 +133,14 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
           key: 'settings',
           label: 'Settings',
         ),
+        MenuItem(
+          key: 'show',
+          label: 'Show',
+        ),
+        MenuItem(
+          key: 'quit',
+          label: 'Quit',
+        ),
       ],
     );
     trayManager.setContextMenu(menu);
@@ -134,6 +159,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     if (!context.mounted) {
       return;
     }
+    final StreamController<String> _eventStreamController = StreamController<String>();
+
+    windowManager.show();
+    windowManager.focus();
 
     await showDialog(
       context: context,
@@ -254,21 +283,39 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       forceRefresh();
     }
 
+    var appBarActions = [
+      IconButton(
+        tooltip: "Settings",
+        icon: const Icon(Icons.settings),
+        onPressed: showSettingsWindow,
+      ),
+      IconButton(
+        tooltip: "Refresh",
+        icon: const Icon(Icons.refresh),
+        onPressed: forceRefresh,
+      ),
+      IconButton(
+        icon: const Icon(Icons.minimize),
+        tooltip: "Close to system tray",
+        onPressed: () {
+          windowManager.hide();
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.power_off),
+        tooltip: "Quit application",
+        onPressed: () {
+          windowManager.destroy();
+        },
+      ),
+    ];
+
     if (status == 'Error') {
       return Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
           title: const Text('Lemmy Notifier'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: showSettingsWindow,
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: forceRefresh,
-            ),
-          ],
+          actions: appBarActions,
         ),
         body: Center(
           child: Column(
@@ -296,16 +343,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Lemmy Notifier'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: showSettingsWindow,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: forceRefresh,
-          ),
-        ],
+        actions: appBarActions,
       ),
       body: Center(
         child: Column(
@@ -361,6 +399,11 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       forceRefresh();
     } else if (menuItem.key == 'settings') {
       showSettingsWindow();
+    } else if (menuItem.key == 'show') {
+      windowManager.show();
+      windowManager.focus();
+    } else if (menuItem.key == 'quit') {
+      windowManager.destroy();
     }
   }
 
@@ -383,6 +426,95 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     if (context.mounted) {
       Navigator.of(context).pop();
     }
+  }
+
+  @override
+  void onWindowBlur() {
+    // TODO: implement onWindowBlur
+  }
+
+  @override
+  void onWindowClose() async {
+    bool _isPreventClose = await windowManager.isPreventClose();
+    if (_isPreventClose) {
+      windowManager.hide();
+    }
+  }
+
+  @override
+  void onWindowDocked() {
+    // TODO: implement onWindowDocked
+  }
+
+  @override
+  void onWindowEnterFullScreen() {
+    // TODO: implement onWindowEnterFullScreen
+  }
+
+  @override
+  void onWindowEvent(String eventName) {
+    // TODO: implement onWindowEvent
+  }
+
+  @override
+  void onWindowFocus() {
+    setState(() {});
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    // TODO: implement onWindowLeaveFullScreen
+  }
+
+  @override
+  void onWindowMaximize() {
+    // TODO: implement onWindowMaximize
+  }
+
+  @override
+  void onWindowMinimize() {
+    // TODO: implement onWindowMinimize
+  }
+
+  @override
+  void onWindowMove() {
+    // TODO: implement onWindowMove
+  }
+
+  @override
+  void onWindowMoved() {
+    // TODO: implement onWindowMoved
+  }
+
+  @override
+  void onWindowResize() {
+    // TODO: implement onWindowResize
+  }
+
+  @override
+  void onWindowResized() {
+    // TODO: implement onWindowResized
+  }
+
+  @override
+  void onWindowRestore() {
+    // TODO: implement onWindowRestore
+  }
+
+  @override
+  void onWindowUndocked() {
+    // TODO: implement onWindowUndocked
+  }
+
+  @override
+  void onWindowUnmaximize() {
+    // TODO: implement onWindowUnmaximize
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
   }
 }
 
@@ -407,11 +539,13 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then(((SharedPreferences prefs) {
-      openMinimizedToSystemTray = prefs.getBool('openMinimizedToSystemTray')??openMinimizedToSystemTray;
-      serverController.text = prefs.getString('serverUrl') ?? '';
-      usernameController.text = prefs.getString('username') ?? '';
-      passwordController.text = '';
-      timerIntervalController.text = prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5';
+      setState(() {
+        openMinimizedToSystemTray = prefs.getBool('openMinimizedToSystemTray')??openMinimizedToSystemTray;
+        serverController.text = prefs.getString('serverUrl') ?? '';
+        usernameController.text = prefs.getString('username') ?? '';
+        passwordController.text = '';
+        timerIntervalController.text = prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5';
+      });
     }));
   }
   //
