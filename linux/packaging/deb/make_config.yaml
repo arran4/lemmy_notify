@@ -1,0 +1,17 @@
+display_name: Lemmy Notifications
+package_name: lemmy-notify
+maintainer:
+  name: Arran Ubels
+  email: arran4@gmail.com
+priority: optional
+section: x11
+installed_size: 6604
+essential: false
+icon: images/tray_icon.png
+
+generic_name: Misc Applications
+
+categories:
+  - Utility
+
+startup_notify: true

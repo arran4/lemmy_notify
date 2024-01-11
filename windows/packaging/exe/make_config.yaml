@@ -1,0 +1,10 @@
+# The value of AppId uniquely identifies this application.
+# Do not use the same AppId value in installers for other applications.
+app_id: 88117dee-ddc5-40ee-963e-2bee23b53bf9
+publisher: Arran4
+publisher_url: https://github.com/arran4/lemmy_notify
+display_name: Lemmy Notification
+create_desktop_icon: true
+install_dir_name: lemmy-notification
+locales:
+  - en

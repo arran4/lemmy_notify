@@ -1,0 +1,12 @@
+display_name: Lemmy Notifications
+
+icon: images/tray_icon.png
+
+generic_name: Misc Application
+
+categories:
+  - Utility
+
+startup_notify: true
+
+include: []

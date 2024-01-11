@@ -1,0 +1,17 @@
+display_name: Lemmy Notifications
+icon: images/tray_icon.png
+summary: lemmy_notify
+group: Application/Utils
+vendor: Arran Ubels
+packager: Arran Ubels
+packagerEmail: arran4@gmail.com
+license: NA
+url: https://github.com/arran4/lemmy_notify
+
+
+categories:
+  - Utility
+
+generic_name: Misc Applications
+
+startup_notify: true
