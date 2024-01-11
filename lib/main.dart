@@ -32,11 +32,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   Future<LemmyApiV3?>? lemmyClient;
   LoginResponse? authResponse;
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
-  String icon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
-  String iconNewPosts = 'images/tray_icon_new_posts.png';
-  String iconNewMessages = 'images/tray_icon_new_messages.png';
-  String iconDefault = 'images/tray_icon.png';
-  String currentIcon = 'images/tray_icon.png';
+  String iconNewPosts = Platform.isWindows ? 'images/tray_icon_new_posts.ico' : 'images/tray_icon_new_posts.png';
+  String iconNewMessages = Platform.isWindows ? 'images/tray_icon_new_messages.ico' : 'images/tray_icon_new_messages.png';
+  String iconDefault = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String currentIcon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
   String? status;
   String? lastError;
   Timer? updateTimer;
@@ -360,8 +359,6 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('New Posts: ${newPostsCount ?? 'initializing'}'),
-            Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
             if (siteResponse != null)
               GestureDetector(
                 onTap: () {
@@ -369,11 +366,22 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
                     launchUrlString(siteResponse!.siteView.site.actorId);
                   }
                 },
-                child: Text(
-                  '\nLemmy Instance: ${siteResponse?.siteView.site.name}',
-                  style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                child: Tooltip(
+                  message: siteResponse?.siteView.site.actorId ?? '', // Display the URL as a tooltip
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Lemmy Instance: '),
+                      Text(
+                        '${siteResponse?.siteView.site.name}',
+                        style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                      )
+                    ],
+                  ),
                 ),
               ),
+            Text('New Posts: ${newPostsCount ?? 'initializing'}'),
+            Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
           ],
         ),
       ),
