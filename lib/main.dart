@@ -35,6 +35,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   String? lastError;
   Timer? updateTimer;
   bool openMinimizedToSystemTray = false;
+  GetSiteResponse? siteResponse;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -67,8 +68,15 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       }
       setState(() {
         status = 'configured';
+        siteResponse = null;
       });
       showSnackbar('Status: $status');
+
+      GetSiteResponse sr = await client.run(GetSite(auth: authResponse!.jwt));
+      setState(() {
+        siteResponse = sr;
+      });
+
       return client;
     } catch (e) {
       showSnackbar('Error: $e');
@@ -226,12 +234,13 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = posts.posts.where((PostView post) => post.read && post.unreadComments == 0).length;
+        newPostsCount = posts.posts.where((PostView post) => !post.read && post.unreadComments >= 0).length;
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
         showSnackbar('Status: Update Successful\n'
             'New Posts: $newPostsCount (Delta: ${newPostsCount! - oldPostsCount}), '
-            'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})');
+            'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})\n'
+            'Lemmy Instance: ${siteResponse?.siteView.site.name}');
       });
 
       // Update the system tray icon with the new counts
@@ -251,21 +260,33 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
     }
   }
 
+  void showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: RichText(
+          text: TextSpan(
+            text: message,
+            style: const TextStyle(color: Colors.white),
+            children: [
+              if (siteResponse != null)
+                TextSpan(
+                  text: '\nLemmy Instance: ${siteResponse?.siteView.site.name}',
+                  style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
   void forceRefresh() {
     setState(() {
       status = 'loading';
     });
     checkForUpdates();
-  }
-
-  void showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-        backgroundColor: Colors.blue,
-      ),
-    );
   }
 
   @override
@@ -327,6 +348,12 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
           children: <Widget>[
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
+            if (siteResponse != null)
+              Text(
+                '\nLemmy Instance: ${siteResponse?.siteView.site.name} ${siteResponse?.siteView.site.actorId}',
+                style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+              ),
+
           ],
         ),
       ),
