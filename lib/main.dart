@@ -253,11 +253,13 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener {
   }
 
   void showSnackbar(String message) {
-    _scaffoldKey.currentState?.showSnackBar(SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 3),
-      backgroundColor: Colors.blue,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.blue,
+      ),
+    );
   }
 
   @override
