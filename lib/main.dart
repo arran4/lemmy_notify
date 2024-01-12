@@ -218,9 +218,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
 
-        if (newMessagesCount! > oldMessagesCount) {
+        if (newMessagesCount! > 0) {
           currentIcon = iconNewMessages;
-        } else if (newPostsCount! > oldPostsCount) {
+        } else if (newPostsCount! > 0) {
           currentIcon = iconNewPosts;
         } else {
           currentIcon = iconDefault;
