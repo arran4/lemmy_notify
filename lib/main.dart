@@ -214,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = posts.posts.where((PostView post) => !post.read && post.unreadComments >= 0).length;
+        newPostsCount = posts.posts.where((PostView post) => !post.read || post.unreadComments >= 0).length;
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
 
