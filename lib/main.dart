@@ -204,7 +204,7 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
         status = 'checking';
       });
       // Fetch new posts
-      final GetPostsResponse posts = await client!.run(GetPosts(auth: authResponse!.jwt));
+      final GetPostsResponse posts = await client!.run(GetPosts(auth: authResponse!.jwt, type: ListingType.all, sort: SortType.newComments));
 
       // Fetch new messages
       final PrivateMessagesResponse messages = await client!.run(
