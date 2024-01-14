@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:lemmy_api_client/v3.dart';
@@ -62,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage>
   String? lastError;
   Timer? updateTimer;
   GetSiteResponse? siteResponse;
+  GetPostsResponse? posts;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -222,7 +224,7 @@ class _MyHomePageState extends State<MyHomePage>
         status = 'checking';
       });
       // Fetch new posts
-      final GetPostsResponse posts = await client!.run(GetPosts(
+      posts = await client!.run(GetPosts(
           auth: authResponse!.jwt,
           type: ListingType.all,
           sort: SortType.newComments));
@@ -235,8 +237,8 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = posts.posts
-            .where((PostView post) => !post.read || post.unreadComments >= 0)
+        newPostsCount = (posts?.posts??[])
+            .where((PostView post) => !post.read || post.unreadComments > 0)
             .length;
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
@@ -357,12 +359,6 @@ class _MyHomePageState extends State<MyHomePage>
       );
     }
 
-    // Custom style for the link
-    TextStyle linkStyle = const TextStyle(
-      color: Colors.blue,
-      decoration: TextDecoration.underline,
-    );
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -381,21 +377,41 @@ class _MyHomePageState extends State<MyHomePage>
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 if (siteResponse != null)
-                  GestureDetector(
-                    onTap: () {
-                      if (siteResponse != null) {
-                        launchUrlString(siteResponse!.siteView.site.actorId);
-                      }
-                    },
-                    child: Text(
-                      '${siteResponse?.siteView.site.name}',
-                      style: linkStyle,
-                    ),
+                  ClickableLink(
+                    linkTitle: siteResponse?.siteView.site.name,
+                    linkUrlStr: siteResponse!.siteView.site.actorId,
                   ),
               ],
             ),
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
+            const Text(''),
+            const Text("Some New Posts:", style: TextStyle(decoration: TextDecoration.underline,),),
+            for (PostView post in ((posts?.posts??[]).where((PostView post) => !post.read).toList()))
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('* '),
+                  ClickableLink(
+                    linkTitle: post.post.name,
+                    linkUrlStr: post.post.apId,
+                  ),
+                ],
+              ),
+            const Text(''),
+            const Text("Some Posts with unread comments:", style: TextStyle(decoration: TextDecoration.underline,),),
+            for (PostView post in ((posts?.posts??[]).where((PostView post) => post.unreadComments > 0).toList()))
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('* '),
+                  ClickableLink(
+                    linkTitle: post.post.name,
+                    linkUrlStr: post.post.apId,
+                  ),
+                  Text(' Unread comments: ${post.unreadComments} '),
+                ],
+              ),
           ],
         ),
       ),
@@ -545,6 +561,33 @@ class _MyHomePageState extends State<MyHomePage>
   void dispose() {
     windowManager.removeListener(this);
     super.dispose();
+  }
+}
+
+class ClickableLink extends StatelessWidget {
+  TextStyle linkStyle = const TextStyle(
+    color: Colors.blue,
+    decoration: TextDecoration.underline,
+  );
+
+  final String? linkUrlStr;
+  final String? linkTitle;
+
+  ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        if (linkUrlStr != null) {
+          launchUrlString(linkUrlStr!);
+        }
+      },
+      child: Text(
+        '$linkTitle',
+        style: linkStyle,
+      ),
+    );
   }
 }
 
