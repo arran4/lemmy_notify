@@ -1,6 +1,6 @@
 # lemmy_notify
 
-Lemmy Notification Project.
+Lemmy Notification Project. (Right now more of an `indicator` as it doesn't have any notifications just a system tray update.)
 
 This sits in your system tray and will display one of the following icons depending on what what's 
 available.
