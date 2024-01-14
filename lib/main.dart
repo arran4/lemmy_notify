@@ -13,12 +13,12 @@ void main() async {
   await windowManager.ensureInitialized();
 
   WindowOptions windowOptions = WindowOptions(
-    // size: Size(800, 600),
-    // center: true,
-    // backgroundColor: Colors.transparent,
-    // skipTaskbar: false,
-    // titleBarStyle: TitleBarStyle.hidden,
-  );
+      // size: Size(800, 600),
+      // center: true,
+      // backgroundColor: Colors.transparent,
+      // skipTaskbar: false,
+      // titleBarStyle: TitleBarStyle.hidden,
+      );
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // await windowManager.show();
     // await windowManager.focus();
@@ -41,16 +41,23 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> implements TrayListener, WindowListener {
+class _MyHomePageState extends State<MyHomePage>
+    implements TrayListener, WindowListener {
   int? newPostsCount;
   int? newMessagesCount;
   Future<LemmyApiV3?>? lemmyClient;
   LoginResponse? authResponse;
   FlutterSecureStorage secureStorage = const FlutterSecureStorage();
-  String iconNewPosts = Platform.isWindows ? 'images/tray_icon_new_posts.ico' : 'images/tray_icon_new_posts.png';
-  String iconNewMessages = Platform.isWindows ? 'images/tray_icon_new_messages.ico' : 'images/tray_icon_new_messages.png';
-  String iconDefault = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
-  String currentIcon = Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String iconNewPosts = Platform.isWindows
+      ? 'images/tray_icon_new_posts.ico'
+      : 'images/tray_icon_new_posts.png';
+  String iconNewMessages = Platform.isWindows
+      ? 'images/tray_icon_new_messages.ico'
+      : 'images/tray_icon_new_messages.png';
+  String iconDefault =
+      Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
+  String currentIcon =
+      Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
   String? status;
   String? lastError;
   Timer? updateTimer;
@@ -66,7 +73,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
     lemmyClient = createLemmyClient();
     initSystemTray();
     initTimer();
-    SharedPreferences.getInstance().then((prefs) => prefs.getBool('openMinimizedToSystemTray') ?? false).then((value) {
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.getBool('openMinimizedToSystemTray') ?? false)
+        .then((value) {
       if (!value) {
         windowManager.show();
         windowManager.focus();
@@ -77,8 +86,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
   Future<LemmyApiV3?> createLemmyClient() async {
     try {
       // Load user preferences
-      final String? serverUrl = await SharedPreferences.getInstance().then((prefs) => prefs.getString('serverUrl') ?? '');
-      final String? username = await SharedPreferences.getInstance().then((prefs) => prefs.getString('username') ?? '');
+      final String? serverUrl = await SharedPreferences.getInstance()
+          .then((prefs) => prefs.getString('serverUrl') ?? '');
+      final String? username = await SharedPreferences.getInstance()
+          .then((prefs) => prefs.getString('username') ?? '');
       final String? password = await secureStorage.read(key: 'password');
 
       if (serverUrl == null || username == null) {
@@ -91,7 +102,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
       // Set up the Lemmy API client with user preferences
       LemmyApiV3 client = LemmyApiV3(serverUrl);
       if (password != null) {
-        authResponse = await client.run(Login(usernameOrEmail: username, password: password));
+        authResponse = await client
+            .run(Login(usernameOrEmail: username, password: password));
       }
       setState(() {
         status = 'configured';
@@ -121,7 +133,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
       currentIcon, // Use a different icon if needed
     );
     if (!Platform.isLinux) {
-      trayManager.setToolTip('New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
+      trayManager.setToolTip(
+          'New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
     }
     Menu menu = Menu(
       items: [
@@ -149,8 +162,10 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
 
   Future<void> initTimer() async {
     final prefs = await SharedPreferences.getInstance();
-    final int timerInterval = prefs.getInt('timerInterval') ?? 5; // Default timer interval is 5 minutes
-    updateTimer = Timer.periodic(Duration(minutes: timerInterval), (Timer timer) {
+    final int timerInterval = prefs.getInt('timerInterval') ??
+        5; // Default timer interval is 5 minutes
+    updateTimer =
+        Timer.periodic(Duration(minutes: timerInterval), (Timer timer) {
       checkForUpdates();
     });
   }
@@ -159,7 +174,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
     if (!context.mounted) {
       return;
     }
-    final StreamController<String> _eventStreamController = StreamController<String>();
+    final StreamController<String> _eventStreamController =
+        StreamController<String>();
 
     windowManager.show();
     windowManager.focus();
@@ -169,7 +185,9 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Settings'),
-          content: SettingsPage(savedResults: saveSettings, eventStream: _eventStreamController.stream),
+          content: SettingsPage(
+              savedResults: saveSettings,
+              eventStream: _eventStreamController.stream),
           actions: [
             TextButton(
               onPressed: () {
@@ -204,17 +222,22 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
         status = 'checking';
       });
       // Fetch new posts
-      final GetPostsResponse posts = await client!.run(GetPosts(auth: authResponse!.jwt, type: ListingType.all, sort: SortType.newComments));
+      final GetPostsResponse posts = await client!.run(GetPosts(
+          auth: authResponse!.jwt,
+          type: ListingType.all,
+          sort: SortType.newComments));
 
       // Fetch new messages
-      final PrivateMessagesResponse messages = await client!.run(
-          GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
+      final PrivateMessagesResponse messages = await client!
+          .run(GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
 
       // Update the counts
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = posts.posts.where((PostView post) => !post.read || post.unreadComments >= 0).length;
+        newPostsCount = posts.posts
+            .where((PostView post) => !post.read || post.unreadComments >= 0)
+            .length;
         newMessagesCount = messages.privateMessages.length;
         status = "updated";
 
@@ -259,7 +282,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
               if (siteResponse != null)
                 TextSpan(
                   text: '\nLemmy Instance: ${siteResponse?.siteView.site.name}',
-                  style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                  style: const TextStyle(
+                      color: Colors.blue, decoration: TextDecoration.underline),
                 ),
             ],
           ),
@@ -349,20 +373,25 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            if (siteResponse != null)
-              Row(mainAxisAlignment: MainAxisAlignment.center,children: [
-                const Text('Lemmy Instance: ', style: TextStyle(fontWeight: FontWeight.bold),),
-                GestureDetector(
-                  onTap: () {
-                    if (siteResponse != null) {
-                      launchUrlString(siteResponse!.siteView.site.actorId);
-                    }
-                  },
-                  child: Text(
-                    '${siteResponse?.siteView.site.name}',
-                    style: linkStyle,
-                  ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Lemmy Instance: ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
+                if (siteResponse != null)
+                  GestureDetector(
+                    onTap: () {
+                      if (siteResponse != null) {
+                        launchUrlString(siteResponse!.siteView.site.actorId);
+                      }
+                    },
+                    child: Text(
+                      '${siteResponse?.siteView.site.name}',
+                      style: linkStyle,
+                    ),
+                  ),
               ],
             ),
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
@@ -407,7 +436,8 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
     }
   }
 
-  void saveSettings(String serverUrl, String username, int timerInterval, String? password) async {
+  void saveSettings(String serverUrl, String username, int timerInterval,
+      String? password) async {
     final prefs = await SharedPreferences.getInstance();
     // Save user preferences
     await prefs.setString('serverUrl', serverUrl);
@@ -518,13 +548,15 @@ class _MyHomePageState extends State<MyHomePage> implements TrayListener, Window
   }
 }
 
-typedef SettingsPageSavedResultsFunc = void Function(String serverUrl, String username, int timerInterval, String? password);
+typedef SettingsPageSavedResultsFunc = void Function(
+    String serverUrl, String username, int timerInterval, String? password);
 
 class SettingsPage extends StatefulWidget {
   final SettingsPageSavedResultsFunc? savedResults;
   final Stream<String> eventStream;
 
-  SettingsPage({super.key, required this.eventStream, required this.savedResults});
+  SettingsPage(
+      {super.key, required this.eventStream, required this.savedResults});
 
   @override
   State<StatefulWidget> createState() {
@@ -540,14 +572,19 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     SharedPreferences.getInstance().then(((SharedPreferences prefs) {
       setState(() {
-        openMinimizedToSystemTray = prefs.getBool('openMinimizedToSystemTray')??openMinimizedToSystemTray;
+        openMinimizedToSystemTray =
+            prefs.getBool('openMinimizedToSystemTray') ??
+                openMinimizedToSystemTray;
         serverController.text = prefs.getString('serverUrl') ?? '';
         usernameController.text = prefs.getString('username') ?? '';
         passwordController.text = '';
-        timerIntervalController.text = prefs.getInt('timerInterval') != null ? prefs.getInt('timerInterval').toString() : '5';
+        timerIntervalController.text = prefs.getInt('timerInterval') != null
+            ? prefs.getInt('timerInterval').toString()
+            : '5';
       });
     }));
   }
+
   //
   late TextEditingController serverController = TextEditingController();
   late TextEditingController usernameController = TextEditingController();
@@ -565,15 +602,19 @@ class _SettingsPageState extends State<SettingsPage> {
               if (passwordController.text.isNotEmpty) {
                 pwd = passwordController.text;
               }
-              widget.savedResults!(serverController.text, usernameController.text, int.parse(timerIntervalController.text), pwd);
+              widget.savedResults!(
+                  serverController.text,
+                  usernameController.text,
+                  int.parse(timerIntervalController.text),
+                  pwd);
             }
           }
           return Column(
             children: [
               TextField(
                 controller: serverController,
-                decoration: const InputDecoration(
-                    labelText: 'Lemmy Server URL'),
+                decoration:
+                    const InputDecoration(labelText: 'Lemmy Server URL'),
               ),
               TextField(
                 controller: usernameController,
@@ -595,16 +636,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: const Text('Open minimized to system tray'),
                 onChanged: (bool? value) async {
                   final prefs = SharedPreferences.getInstance();
-                  await (await prefs).setBool('openMinimizedToSystemTray', value ?? false);
+                  await (await prefs)
+                      .setBool('openMinimizedToSystemTray', value ?? false);
                   setState(() {
-                    openMinimizedToSystemTray = value??false;
+                    openMinimizedToSystemTray = value ?? false;
                   });
                 },
               ),
             ],
           );
-        }
-    );
+        });
   }
-
 }
