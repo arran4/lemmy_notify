@@ -1,41 +1,152 @@
 output: dist/
-
 releases:
-  - name: dev
+  - name: onlinux
     jobs:
-      # Generating a debian binary
-      - name: release-dev-linux-zip
-        package:
-          platform: linux
-          target: zip
-          build_args:
-            dart-define:
-              APP_ENV: dev
-      - name: release-dev-linux-deb
+# Broken pending: https://github.com/leanflutter/flutter_distributor/pull/221
+#      - name: linux-appimage
+#        package:
+#          platform: linux
+#          target: appimage
+#        publish:
+#          target: github
+#          args:
+#            repo-owner: arran4
+#            repo-name: lemmy_notify
+      - name: linux-deb
         package:
           platform: linux
           target: deb
-          build_args:
-            dart-define:
-              APP_ENV: dev
-      - name: release-dev-linux-appimage
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: linux-rpm
         package:
           platform: linux
-          target: appimage
+          target: rpm
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: linux-pacman
+        package:
+          platform: linux
+          target: pacman
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: linux-zip
+        package:
+          platform: linux
+          target: zip
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: android-aab
+        package:
+          platform: android
+          target: aab
           build_args:
-            dart-define:
-              APP_ENV: dev
-      - name: release-dev-windows-exe
+            target-platform: android-arm,android-arm64
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: android-apk
+        package:
+          platform: android
+          target: apk
+          build_args:
+            target-platform: android-arm,android-arm64
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: web-direct
+        package:
+          platform: web
+          target: direct
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+  - name: onwindows
+    jobs:
+      - name: windows-exe
         package:
           platform: windows
           target: exe
-          build_args:
-            dart-define:
-              APP_ENV: dev
-      - name: release-dev-macos-dmg
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: windows-msix
+        package:
+          platform: windows
+          target: msix
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+      - name: windows-zip
+        package:
+          platform: windows
+          target: zip
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+  - name: onmac
+    jobs:
+# Disabled for packaging reasons atm.
+#      - name: ios-ipa
+#        package:
+#          platform: ios
+#          target: ipa
+#          build_args:
+#            export-method: ad-hoc
+#        publish:
+#          target: github
+#          args:
+#            repo-owner: arran4
+#            repo-name: lemmy_notify
+      - name: macos-dmg
         package:
           platform: macos
           target: dmg
-          build_args:
-            dart-define:
-              APP_ENV: dev
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
+# Disabled for packaging reasons atm.
+#      - name: macos-pkg
+#        package:
+#          platform: macos
+#          target: pkg
+#        publish:
+#          target: github
+#          args:
+#            repo-owner: arran4
+#            repo-name: lemmy_notify
+      - name: macos-zip
+        package:
+          platform: macos
+          target: zip
+        publish:
+          target: github
+          args:
+            repo-owner: arran4
+            repo-name: lemmy_notify
