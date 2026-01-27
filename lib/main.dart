@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:lemmy_api_client/v3.dart';
@@ -13,7 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
-  WindowOptions windowOptions = WindowOptions(
+  WindowOptions windowOptions = const WindowOptions(
       // size: Size(800, 600),
       // center: true,
       // backgroundColor: Colors.transparent,
@@ -29,6 +28,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -38,6 +39,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -113,7 +116,7 @@ class _MyHomePageState extends State<MyHomePage>
       });
       showSnackbar('Status: $status');
 
-      GetSiteResponse sr = await client.run(GetSite(auth: authResponse!.jwt));
+      GetSiteResponse sr = await client.run(GetSite(auth: authResponse?.jwt));
       setState(() {
         siteResponse = sr;
       });
@@ -224,14 +227,14 @@ class _MyHomePageState extends State<MyHomePage>
         status = 'checking';
       });
       // Fetch new posts
-      posts = await client!.run(GetPosts(
-          auth: authResponse!.jwt,
+      posts = await client.run(GetPosts(
+          auth: authResponse?.jwt,
           type: ListingType.all,
           sort: SortType.newComments));
 
       // Fetch new messages
-      final PrivateMessagesResponse messages = await client!
-          .run(GetPrivateMessages(unreadOnly: true, auth: authResponse!.jwt));
+      final PrivateMessagesResponse messages = await client
+          .run(GetPrivateMessages(unreadOnly: true, auth: authResponse?.jwt));
 
       // Update the counts
       setState(() {
@@ -565,7 +568,7 @@ class _MyHomePageState extends State<MyHomePage>
 }
 
 class ClickableLink extends StatelessWidget {
-  TextStyle linkStyle = const TextStyle(
+  final TextStyle linkStyle = const TextStyle(
     color: Colors.blue,
     decoration: TextDecoration.underline,
   );
@@ -573,7 +576,7 @@ class ClickableLink extends StatelessWidget {
   final String? linkUrlStr;
   final String? linkTitle;
 
-  ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
+  const ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
 
   @override
   Widget build(BuildContext context) {
@@ -598,7 +601,7 @@ class SettingsPage extends StatefulWidget {
   final SettingsPageSavedResultsFunc? savedResults;
   final Stream<String> eventStream;
 
-  SettingsPage(
+  const SettingsPage(
       {super.key, required this.eventStream, required this.savedResults});
 
   @override
@@ -641,7 +644,7 @@ class _SettingsPageState extends State<SettingsPage> {
         builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
           if (snapshot.hasData && snapshot.data == "save") {
             if (widget.savedResults != null) {
-              String? pwd = null;
+              String? pwd;
               if (passwordController.text.isNotEmpty) {
                 pwd = passwordController.text;
               }
