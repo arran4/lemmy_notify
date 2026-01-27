@@ -42,7 +42,7 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage>
@@ -179,7 +179,7 @@ class _MyHomePageState extends State<MyHomePage>
     if (!context.mounted) {
       return;
     }
-    final StreamController<String> _eventStreamController =
+    final StreamController<String> eventStreamController =
         StreamController<String>();
 
     windowManager.show();
@@ -192,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage>
           title: const Text('Settings'),
           content: SettingsPage(
               savedResults: saveSettings,
-              eventStream: _eventStreamController.stream),
+              eventStream: eventStreamController.stream),
           actions: [
             TextButton(
               onPressed: () {
@@ -204,7 +204,7 @@ class _MyHomePageState extends State<MyHomePage>
             ),
             TextButton(
               onPressed: () async {
-                _eventStreamController.add("save");
+                eventStreamController.add("save");
               },
               child: const Text('Save'),
             ),
@@ -472,9 +472,8 @@ class _MyHomePageState extends State<MyHomePage>
     await initTimer();
     forceRefresh();
 
-    if (context.mounted) {
-      Navigator.of(context).pop();
-    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -484,8 +483,8 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   void onWindowClose() async {
-    bool _isPreventClose = await windowManager.isPreventClose();
-    if (_isPreventClose) {
+    bool isPreventClose = await windowManager.isPreventClose();
+    if (isPreventClose) {
       windowManager.hide();
     }
   }
