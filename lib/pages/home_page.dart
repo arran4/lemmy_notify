@@ -13,7 +13,7 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage>
@@ -69,6 +69,8 @@ class _MyHomePageState extends State<MyHomePage>
           .then((prefs) => prefs.getString('username') ?? '');
       final String? password = await secureStorage.read(key: 'password');
 
+      if (!mounted) return null;
+
       if (serverUrl == null || username == null) {
         setState(() {
           status = 'Nothing configured';
@@ -82,6 +84,9 @@ class _MyHomePageState extends State<MyHomePage>
         authResponse = await client
             .run(Login(usernameOrEmail: username, password: password));
       }
+
+      if (!mounted) return null;
+
       setState(() {
         status = 'configured';
         detailedStatusMessage = 'Status: $status';
@@ -89,12 +94,17 @@ class _MyHomePageState extends State<MyHomePage>
       });
 
       GetSiteResponse sr = await client.run(GetSite(auth: authResponse?.jwt));
+
+      if (!mounted) return null;
+
       setState(() {
         siteResponse = sr;
       });
 
       return client;
     } catch (e) {
+      if (!mounted) return null;
+      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
@@ -151,7 +161,7 @@ class _MyHomePageState extends State<MyHomePage>
     if (!context.mounted) {
       return;
     }
-    final StreamController<String> _eventStreamController =
+    final StreamController<String> eventStreamController =
         StreamController<String>();
 
     windowManager.show();
@@ -164,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage>
           title: const Text('Settings'),
           content: SettingsPage(
               savedResults: saveSettings,
-              eventStream: _eventStreamController.stream),
+              eventStream: eventStreamController.stream),
           actions: [
             TextButton(
               onPressed: () {
@@ -176,7 +186,7 @@ class _MyHomePageState extends State<MyHomePage>
             ),
             TextButton(
               onPressed: () async {
-                _eventStreamController.add("save");
+                eventStreamController.add("save");
               },
               child: const Text('Save'),
             ),
@@ -184,10 +194,13 @@ class _MyHomePageState extends State<MyHomePage>
         );
       },
     );
+    await eventStreamController.close();
   }
 
   Future<void> checkForUpdates() async {
     LemmyApiV3? client = await lemmyClient;
+    if (!mounted) return;
+
     try {
       if (client == null) {
         return;
@@ -205,9 +218,13 @@ class _MyHomePageState extends State<MyHomePage>
           type: ListingType.all,
           sort: SortType.newComments));
 
+      if (!mounted) return;
+
       // Fetch new messages
       final PrivateMessagesResponse messages = await client
           .run(GetPrivateMessages(unreadOnly: true, auth: authResponse?.jwt));
+
+      if (!mounted) return;
 
       // Update the counts
       setState(() {
@@ -241,6 +258,8 @@ class _MyHomePageState extends State<MyHomePage>
             'New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
       }
     } catch (e) {
+      if (!mounted) return;
+      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
@@ -455,9 +474,8 @@ class _MyHomePageState extends State<MyHomePage>
     await initTimer();
     forceRefresh();
 
-    if (context.mounted) {
-      Navigator.of(context).pop();
-    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -467,8 +485,8 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   void onWindowClose() async {
-    bool _isPreventClose = await windowManager.isPreventClose();
-    if (_isPreventClose) {
+    bool isPreventClose = await windowManager.isPreventClose();
+    if (isPreventClose) {
       windowManager.hide();
     }
   }
