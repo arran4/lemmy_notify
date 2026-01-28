@@ -34,6 +34,7 @@ class _MyHomePageState extends State<MyHomePage>
   String currentIcon =
       Platform.isWindows ? 'images/tray_icon.ico' : 'images/tray_icon.png';
   String? status;
+  String? detailedStatusMessage;
   String? lastError;
   Timer? updateTimer;
   GetSiteResponse? siteResponse;
@@ -83,9 +84,9 @@ class _MyHomePageState extends State<MyHomePage>
       }
       setState(() {
         status = 'configured';
+        detailedStatusMessage = 'Status: $status';
         siteResponse = null;
       });
-      showSnackbar('Status: $status');
 
       GetSiteResponse sr = await client.run(GetSite(auth: authResponse?.jwt));
       setState(() {
@@ -94,10 +95,10 @@ class _MyHomePageState extends State<MyHomePage>
 
       return client;
     } catch (e) {
-      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
+        detailedStatusMessage = 'Error: $e';
       });
       return null;
     }
@@ -196,6 +197,7 @@ class _MyHomePageState extends State<MyHomePage>
       }
       setState(() {
         status = 'checking';
+        detailedStatusMessage = 'Checking...';
       });
       // Fetch new posts
       posts = await client.run(GetPosts(
@@ -224,10 +226,10 @@ class _MyHomePageState extends State<MyHomePage>
         } else {
           currentIcon = iconDefault;
         }
-        showSnackbar('Status: Update Successful\n'
+        detailedStatusMessage = 'Status: Update Successful\n'
             'New Posts: $newPostsCount (Delta: ${newPostsCount! - oldPostsCount}), '
             'New Messages: $newMessagesCount (Delta: ${newMessagesCount! - oldMessagesCount})\n'
-            'Lemmy Instance: ${siteResponse?.siteView.site.name}');
+            'Lemmy Instance: ${siteResponse?.siteView.site.name}';
       });
 
       // Update the system tray icon with the new counts
@@ -239,40 +241,18 @@ class _MyHomePageState extends State<MyHomePage>
             'New Posts: ${newPostsCount ?? 'initializing'}, New Messages: ${newMessagesCount ?? 'initializing'}');
       }
     } catch (e) {
-      showSnackbar('Error: $e');
       setState(() {
         status = 'Error';
         lastError = e.toString();
+        detailedStatusMessage = 'Error: $e';
       });
     }
-  }
-
-  void showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: RichText(
-          text: TextSpan(
-            text: message,
-            style: const TextStyle(color: Colors.white),
-            children: [
-              if (siteResponse != null)
-                TextSpan(
-                  text: '\nLemmy Instance: ${siteResponse?.siteView.site.name}',
-                  style: const TextStyle(
-                      color: Colors.blue, decoration: TextDecoration.underline),
-                ),
-            ],
-          ),
-        ),
-        duration: const Duration(seconds: 3),
-        backgroundColor: Colors.blue,
-      ),
-    );
   }
 
   void forceRefresh() {
     setState(() {
       status = 'loading';
+      detailedStatusMessage = 'Loading...';
     });
     checkForUpdates();
   }
@@ -338,56 +318,88 @@ class _MyHomePageState extends State<MyHomePage>
       appBar: AppBar(
         title: const Text('Lemmy Notifier'),
         actions: appBarActions,
+        bottom: (status == 'loading' || status == 'checking')
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(4.0),
+                child: LinearProgressIndicator(),
+              )
+            : null,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Lemmy Instance: ',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (siteResponse != null)
-                  ClickableLink(
+      bottomNavigationBar: BottomAppBar(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(detailedStatusMessage ?? status ?? ''),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Lemmy Instance: ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (siteResponse != null)
+                Flexible(
+                  child: ClickableLink(
                     linkTitle: siteResponse?.siteView.site.name,
                     linkUrlStr: siteResponse!.siteView.site.actorId,
                   ),
+                ),
+            ],
+          ),
+          Center(child: Text('New Posts: ${newPostsCount ?? 'initializing'}')),
+          Center(
+              child:
+                  Text('New Messages: ${newMessagesCount ?? 'initializing'}')),
+          const SizedBox(height: 16),
+          const Center(
+              child: Text(
+            "Some New Posts:",
+            style: TextStyle(
+              decoration: TextDecoration.underline,
+            ),
+          )),
+          for (PostView post in ((posts?.posts ?? [])
+              .where((PostView post) => !post.read)
+              .toList()))
+            Row(
+              children: [
+                const Text('* '),
+                Flexible(
+                  child: ClickableLink(
+                    linkTitle: post.post.name,
+                    linkUrlStr: post.post.apId,
+                  ),
+                ),
               ],
             ),
-            Text('New Posts: ${newPostsCount ?? 'initializing'}'),
-            Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
-            const Text(''),
-            const Text("Some New Posts:", style: TextStyle(decoration: TextDecoration.underline,),),
-            for (PostView post in ((posts?.posts??[]).where((PostView post) => !post.read).toList()))
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('* '),
-                  ClickableLink(
+          const SizedBox(height: 16),
+          const Center(
+              child: Text(
+            "Some Posts with unread comments:",
+            style: TextStyle(
+              decoration: TextDecoration.underline,
+            ),
+          )),
+          for (PostView post in ((posts?.posts ?? [])
+              .where((PostView post) => post.unreadComments > 0)
+              .toList()))
+            Row(
+              children: [
+                const Text('* '),
+                Flexible(
+                  child: ClickableLink(
                     linkTitle: post.post.name,
                     linkUrlStr: post.post.apId,
                   ),
-                ],
-              ),
-            const Text(''),
-            const Text("Some Posts with unread comments:", style: TextStyle(decoration: TextDecoration.underline,),),
-            for (PostView post in ((posts?.posts??[]).where((PostView post) => post.unreadComments > 0).toList()))
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('* '),
-                  ClickableLink(
-                    linkTitle: post.post.name,
-                    linkUrlStr: post.post.apId,
-                  ),
-                  Text(' Unread comments: ${post.unreadComments} '),
-                ],
-              ),
-          ],
-        ),
+                ),
+                Text(' Unread comments: ${post.unreadComments} '),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -533,6 +545,7 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   void dispose() {
+    updateTimer?.cancel();
     windowManager.removeListener(this);
     super.dispose();
   }
