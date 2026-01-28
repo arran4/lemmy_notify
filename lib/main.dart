@@ -42,7 +42,7 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage>
@@ -179,7 +179,7 @@ class _MyHomePageState extends State<MyHomePage>
     if (!context.mounted) {
       return;
     }
-    final StreamController<String> eventStreamController =
+    final StreamController<String> _eventStreamController =
         StreamController<String>();
 
     windowManager.show();
@@ -192,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage>
           title: const Text('Settings'),
           content: SettingsPage(
               savedResults: saveSettings,
-              eventStream: eventStreamController.stream),
+              eventStream: _eventStreamController.stream),
           actions: [
             TextButton(
               onPressed: () {
@@ -204,7 +204,7 @@ class _MyHomePageState extends State<MyHomePage>
             ),
             TextButton(
               onPressed: () async {
-                eventStreamController.add("save");
+                _eventStreamController.add("save");
               },
               child: const Text('Save'),
             ),
@@ -240,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = (posts?.posts ?? [])
+        newPostsCount = (posts?.posts??[])
             .where((PostView post) => !post.read || post.unreadComments > 0)
             .length;
         newMessagesCount = messages.privateMessages.length;
@@ -389,15 +389,8 @@ class _MyHomePageState extends State<MyHomePage>
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
             const Text(''),
-            const Text(
-              "Some New Posts:",
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-              ),
-            ),
-            for (PostView post in ((posts?.posts ?? [])
-                .where((PostView post) => !post.read)
-                .toList()))
+            const Text("Some New Posts:", style: TextStyle(decoration: TextDecoration.underline,),),
+            for (PostView post in ((posts?.posts??[]).where((PostView post) => !post.read).toList()))
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -409,15 +402,8 @@ class _MyHomePageState extends State<MyHomePage>
                 ],
               ),
             const Text(''),
-            const Text(
-              "Some Posts with unread comments:",
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-              ),
-            ),
-            for (PostView post in ((posts?.posts ?? [])
-                .where((PostView post) => post.unreadComments > 0)
-                .toList()))
+            const Text("Some Posts with unread comments:", style: TextStyle(decoration: TextDecoration.underline,),),
+            for (PostView post in ((posts?.posts??[]).where((PostView post) => post.unreadComments > 0).toList()))
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -486,8 +472,9 @@ class _MyHomePageState extends State<MyHomePage>
     await initTimer();
     forceRefresh();
 
-    if (!mounted) return;
-    Navigator.of(context).pop();
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -497,8 +484,8 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   void onWindowClose() async {
-    bool isPreventClose = await windowManager.isPreventClose();
-    if (isPreventClose) {
+    bool _isPreventClose = await windowManager.isPreventClose();
+    if (_isPreventClose) {
       windowManager.hide();
     }
   }
@@ -589,8 +576,7 @@ class ClickableLink extends StatelessWidget {
   final String? linkUrlStr;
   final String? linkTitle;
 
-  const ClickableLink(
-      {super.key, required this.linkUrlStr, required this.linkTitle});
+  const ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
 
   @override
   Widget build(BuildContext context) {
