@@ -23,6 +23,7 @@ class ClickableLink extends StatelessWidget {
       child: Text(
         '$linkTitle',
         style: linkStyle,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
