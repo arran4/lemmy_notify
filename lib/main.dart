@@ -240,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = (posts?.posts??[])
+        newPostsCount = (posts?.posts ?? [])
             .where((PostView post) => !post.read || post.unreadComments > 0)
             .length;
         newMessagesCount = messages.privateMessages.length;
@@ -389,8 +389,15 @@ class _MyHomePageState extends State<MyHomePage>
             Text('New Posts: ${newPostsCount ?? 'initializing'}'),
             Text('New Messages: ${newMessagesCount ?? 'initializing'}'),
             const Text(''),
-            const Text("Some New Posts:", style: TextStyle(decoration: TextDecoration.underline,),),
-            for (PostView post in ((posts?.posts??[]).where((PostView post) => !post.read).toList()))
+            const Text(
+              "Some New Posts:",
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+              ),
+            ),
+            for (PostView post in ((posts?.posts ?? [])
+                .where((PostView post) => !post.read)
+                .toList()))
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -402,8 +409,15 @@ class _MyHomePageState extends State<MyHomePage>
                 ],
               ),
             const Text(''),
-            const Text("Some Posts with unread comments:", style: TextStyle(decoration: TextDecoration.underline,),),
-            for (PostView post in ((posts?.posts??[]).where((PostView post) => post.unreadComments > 0).toList()))
+            const Text(
+              "Some Posts with unread comments:",
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+              ),
+            ),
+            for (PostView post in ((posts?.posts ?? [])
+                .where((PostView post) => post.unreadComments > 0)
+                .toList()))
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -575,7 +589,8 @@ class ClickableLink extends StatelessWidget {
   final String? linkUrlStr;
   final String? linkTitle;
 
-  const ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
+  const ClickableLink(
+      {super.key, required this.linkUrlStr, required this.linkTitle});
 
   @override
   Widget build(BuildContext context) {
