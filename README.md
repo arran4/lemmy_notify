@@ -110,3 +110,7 @@ The status will update to "Configured" and then "Updated" once it successfully c
 ## Development
 
 The main application logic is contained within `lib/main.dart`. It utilizes the `lemmy_api_client` (v3) for API interaction and `tray_manager`/`window_manager` for desktop integration.
+
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
