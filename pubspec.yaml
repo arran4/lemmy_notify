@@ -1,5 +1,6 @@
 name: lemmy_notify
 description: Lemmy Notificaiton Project
+license: AGPL-3.0
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,7 +35,7 @@ dependencies:
   lemmy_api_client:
     git:
       url: https://github.com/thunder-app/lemmy_api_client.git
-  shared_preferences: ^2.5.4
+  shared_preferences: ^2.3.2
   flutter_secure_storage: ^10.0.0
 
   # The following adds the Cupertino Icons font to your application.
