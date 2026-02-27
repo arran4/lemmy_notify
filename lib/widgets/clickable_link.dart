@@ -10,7 +10,8 @@ class ClickableLink extends StatelessWidget {
   final String? linkUrlStr;
   final String? linkTitle;
 
-  const ClickableLink({super.key, required this.linkUrlStr, required this.linkTitle});
+  const ClickableLink(
+      {super.key, required this.linkUrlStr, required this.linkTitle});
 
   @override
   Widget build(BuildContext context) {

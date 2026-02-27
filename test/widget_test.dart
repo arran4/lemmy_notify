@@ -13,7 +13,8 @@ void main() {
     // Mock window_manager
     const MethodChannel windowManagerChannel = MethodChannel('window_manager');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(windowManagerChannel, (MethodCall methodCall) async {
+        .setMockMethodCallHandler(windowManagerChannel,
+            (MethodCall methodCall) async {
       if (methodCall.method == 'isMinimized') {
         return false;
       }
@@ -26,14 +27,17 @@ void main() {
     // Mock tray_manager
     const MethodChannel trayManagerChannel = MethodChannel('tray_manager');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(trayManagerChannel, (MethodCall methodCall) async {
+        .setMockMethodCallHandler(trayManagerChannel,
+            (MethodCall methodCall) async {
       return null;
     });
 
     // Mock flutter_secure_storage
-    const MethodChannel secureStorageChannel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    const MethodChannel secureStorageChannel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(secureStorageChannel, (MethodCall methodCall) async {
+        .setMockMethodCallHandler(secureStorageChannel,
+            (MethodCall methodCall) async {
       return null;
     });
   });
