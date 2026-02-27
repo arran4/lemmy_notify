@@ -7,10 +7,38 @@ permissions:
   contents: write
 
 env:
-  FLUTTER_VERSION: '3.38.7'
+  FLUTTER_SDK_VERSION: '3.38.7'
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          flutter-version: ${{ env.FLUTTER_SDK_VERSION }}
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libappindicator3-dev libgtk-3-dev libjsoncpp-dev libnotify-dev libsecret-1-dev
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze project source
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
   windows:
+    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +46,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version: ${{ env.FLUTTER_SDK_VERSION  }}
 
       - name: Set up environment vars
         shell: bash
@@ -45,6 +73,7 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
   linux:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +81,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version: ${{ env.FLUTTER_SDK_VERSION  }}
 
       - name: Install Dependencies
         run: |
@@ -87,6 +116,7 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
   macos:
+    needs: test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +124,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version: ${{ env.FLUTTER_SDK_VERSION  }}
 
       - name: Dependencies
         run: |

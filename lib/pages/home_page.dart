@@ -104,7 +104,8 @@ class _MyHomePageState extends State<MyHomePage>
       return client;
     } catch (e) {
       if (!mounted) return null;
-      showSnackbar('Error: $e');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
       setState(() {
         status = 'Error';
         lastError = e.toString();
@@ -230,7 +231,7 @@ class _MyHomePageState extends State<MyHomePage>
       setState(() {
         final int oldPostsCount = newPostsCount ?? 0;
         final int oldMessagesCount = newMessagesCount ?? 0;
-        newPostsCount = (posts?.posts??[])
+        newPostsCount = (posts?.posts ?? [])
             .where((PostView post) => !post.read || post.unreadComments > 0)
             .length;
         newMessagesCount = messages.privateMessages.length;
@@ -259,7 +260,8 @@ class _MyHomePageState extends State<MyHomePage>
       }
     } catch (e) {
       if (!mounted) return;
-      showSnackbar('Error: $e');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
       setState(() {
         status = 'Error';
         lastError = e.toString();
