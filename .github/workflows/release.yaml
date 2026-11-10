@@ -43,7 +43,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version-file: .fvmrc
 
       - name: Set up environment vars
         shell: bash
@@ -78,7 +78,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version-file: .fvmrc
 
       - name: Install Dependencies
         run: |
@@ -121,7 +121,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           cache: true
-          flutter-version: ${{ env.FLUTTER_VERSION  }}
+          flutter-version-file: .fvmrc
 
       - name: Dependencies
         run: |
